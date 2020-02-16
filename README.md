@@ -23,17 +23,6 @@ $ meson build
 $ ninja -C build
 ```
 
-If you want to generate all files from scratch / want to understand the building process a bit more (like I had to :D):
-```console
-$ git submodule add https://github.com/swaywm/wlr-protocols.git wlr-protocols/
-$ git submodule update --init --recursive
-$ wayland-scanner private-code wlr-protocols/unstable/wlr-gamma-control-unstable-v1.xml src/wlr-gamma-control-unstable-v1-client-protocol.c
-$ wayland-scanner client-header wlr-protocols/unstable/wlr-gamma-control-unstable-v1.xml src/wlr-gamma-control-unstable-v1-client-protocol.h
-$ glib-compile-resources --target=src/resources.c --generate-source glade/window_main.gresource.xml
-$ meson build
-$ ninja -C build
-```
-
 # Run
 Call without any arguments to run the GUI
 ```console
