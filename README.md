@@ -2,7 +2,7 @@
 ![wl-gammactl](img/wl-gammactl.png)
 
 
-Small GTK GUI application to set contrast, brightness and gamma for wayland compositors which support the wlr-gamma-control protocol extension.
+Small GTK GUI application to set contrast, brightness and gamma for wayland compositors which support the wlr-gamma-control protocol extension (this does not include gnome-3.34).
 Basically this is the example from here: https://github.com/swaywm/wlroots/blob/master/examples/gamma-control.c
 with a nice little GTK GUI slapped on to it. You can set contrast, brightness and gamma using sliders and reset back to default values.
 
