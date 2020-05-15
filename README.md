@@ -13,8 +13,15 @@ When you are satisfied with your settings, copy the given command line and execu
 
 Keep in mind that it uses the same protocol extension like the redshift fork https://aur.archlinux.org/packages/redshift-wlr-gamma-control/  
 When running wl-gammactl it will kick out any running redshift instance and fail to start up. On second run it should work as expected.
-So unfortunatly only one can run at a time (?) for now.
+So unfortunately only one can run at a time (?) for now.
 
+# Packages
+
+## Fedora-31+
+
+```sh
+dnf install wl-gammactl
+```
 # Build
 For most use cases this should do:  
 Clone the repository and
