@@ -35,4 +35,21 @@ $ wl-gammactl -c 0.996 -b 1 -g 1.05
 ```
 Useful for calling on startup
 
+Run in background, reading values from fifo, eg:
+```console
+$ wl-gammactl -f /run/user/1001/wl-gammactl
+```
+and then from another shell you can control the values, eg:
+```console
+$ echo "c+0.05" >/run/user/1001/wl-gammactl
+```
+to increase contrast by 0.05. Or
+```console
+$ echo "b-0.2" >/run/user/1001/wl-gammactl
+```
+to decrease brightness by 0.2.
+
+The background mode is useful if you want to control values using custom
+shortcuts from within your compositor. It is recommended to use
+$XDG_RUNTIME_DIR/wl-gammactl as the fifo path.
 
