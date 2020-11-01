@@ -2,12 +2,16 @@
 #define _POSIX_C_SOURCE 200809L
 #include "wlr-gamma-control-unstable-v1-client-protocol.h"
 #include <errno.h>
+#include <fcntl.h>
 #include <gtk/gtk.h>
 #include <locale.h>
 #include <stdio.h>
 #include <sys/mman.h>
+#include <sys/stat.h>
 #include <wayland-client-protocol.h>
 #include <wayland-client.h>
+
+#define READLEN 6
 
 // wayland specifics
 static struct zwlr_gamma_control_manager_v1 *gamma_control_manager =
@@ -250,12 +254,15 @@ static const char usage[] = "usage: wl-gammactl [options]\n"
 							"  -c <value>  set contrast (default: 1)\n"
 							"  -b <value>  set brightness (default: 1)\n"
 							"  -g <value>  set gamma (default: 1)\n"
+							"  -f <path>   create and read values from fifo <path>\n"
 							"  no options to show the gui\n";
 
 int run_cmdline(int argc, char *argv[]) {
-	double contrast = 1, brightness = 1, gamma = 1;
-	int opt;
-	while ((opt = getopt(argc, argv, "hc:b:g:")) != -1) {
+	double contrast = 1, brightness = 1, gamma = 1, val;
+	const char *fifopath = NULL;
+	int opt, fd, n;
+	char buf[READLEN] = "", type;
+	while ((opt = getopt(argc, argv, "hc:b:g:f:")) != -1) {
 		switch (opt) {
 		case 'c':
 			contrast = strtod(optarg, NULL);
@@ -266,6 +273,9 @@ int run_cmdline(int argc, char *argv[]) {
 		case 'g':
 			gamma = strtod(optarg, NULL);
 			break;
+		case 'f':
+			fifopath = optarg;
+			break;
 		case 'h':
 		default:
 			fprintf(stderr, usage);
@@ -273,12 +283,60 @@ int run_cmdline(int argc, char *argv[]) {
 		}
 	}
 
-	wl_set_cbg(contrast, brightness, gamma);
-
-	while (wl_display_dispatch(display) != -1) {
-		// This space is intentionnally left blank
+	if (fifopath == NULL) {
+		wl_set_cbg(contrast, brightness, gamma);
+		while (wl_display_dispatch(display) != -1) {
+			// This space is intentionnally left blank
+		}
+		return EXIT_SUCCESS;
 	}
-	return EXIT_SUCCESS;
+
+	if (mkfifo(fifopath, S_IRWXU) < 0)
+	{
+		if (errno != EEXIST) {
+			fprintf(stderr, "could not create %s\n", fifopath);
+			return EXIT_FAILURE;
+		}
+	}
+	setvbuf(stdout, NULL, _IONBF, 0);
+	printf("waiting for input on: %s\n", fifopath);
+	while (1) {
+		fd = open(fifopath, O_RDONLY);
+		if (fd == -1)
+		{
+			fprintf(stderr, "could not open %s\n", fifopath);
+			return EXIT_FAILURE;
+		}
+		if ((n = read(fd, buf, READLEN))) {
+			// parse an expression like "c+0.14" or "b-0.4"
+			if ((n < 3) || (2 != sscanf(buf, "%c%lf", &type, &val))) {
+				fprintf(stderr, "could not parse %s\n", buf);
+			} else {
+				switch (type) {
+				case 'c':
+				case 'C':
+					contrast = contrast + val;
+					break;
+				case 'b':
+				case 'B':
+					brightness = brightness + val;
+					break;
+				case 'g':
+				case 'G':
+					gamma = gamma + val;
+					break;
+				default:
+					fprintf(stderr, "Invalid type: %c\n", type);
+				}
+				wl_set_cbg(contrast, brightness, gamma);
+			}
+			while (read(fd, buf, 1)) {
+				// discard remaining input
+			}
+			memset(&buf[0], 0, READLEN);
+		}
+	}
+
 }
 
 int main(int argc, char *argv[]) {
