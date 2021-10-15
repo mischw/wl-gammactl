@@ -15,15 +15,25 @@ Keep in mind that it uses the same protocol extension like the redshift fork htt
 When running wl-gammactl it will kick out any running redshift instance and fail to start up. On second run it should work as expected.
 So unfortunatly only one can run at a time (?) for now.
 
-# Build
+## Build
 For most use cases this should do:  
-Clone the repository and
+
+1. Install the required dependencies (Example for Debian/Ubuntu/Mint):
 ```console
+$ sudo apt install libwlroots-dev libgtk-3-dev build-essential git
+```
+2. Clone the repository 
+```console
+$ git clone https://github.com/mischw/wl-gammactl.git 
+```
+3. Start the build
+```console
+$ cd wl-gammactl
 $ meson build
 $ ninja -C build
 ```
 
-# Run
+## Run
 Call without any arguments to run the GUI
 ```console
 $ wl-gammactl
