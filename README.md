@@ -6,6 +6,7 @@ Small GTK GUI application to set contrast, brightness and gamma for wayland comp
 Basically this is the example from here: https://github.com/swaywm/wlroots/blob/master/examples/gamma-control.c
 with a nice little GTK GUI slapped on to it. You can set contrast, brightness and gamma using sliders and reset back to default values.
 
+**NOTE:** This protocol is not (yet) supported by Gnome Shell, so `wl-gammactl` will fail there reporting `compositor doesn't support wlr-gamma-control-unstable-v1`
 
 This was made to make the process of calibrating your monitor a bit easier, since wayland support for color profiles is not yet implemented.
 When you are satisfied with your settings, copy the given command line and execute it at startup to make the settings load at apply on every boot.
