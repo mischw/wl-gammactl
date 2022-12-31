@@ -33,6 +33,12 @@ Call with arguments to set values without GUI, eg:
 ```console
 $ wl-gammactl -c 0.996 -b 1 -g 1.05
 ```
+Call with arguments to set values for a specified monitor.
+
+```console
+$ wl-gammactl -m eDP-1 -c 0.996 -b 1 -g 1.05
+```
+
 Useful for calling on startup
 
 
