@@ -8,16 +8,20 @@
 #include <sys/mman.h>
 #include <wayland-client-protocol.h>
 #include <wayland-client.h>
+#include <stdbool.h>
 
 // wayland specifics
 static struct zwlr_gamma_control_manager_v1 *gamma_control_manager =
 		NULL; // handle to the registry global for gamma management
 struct wl_display *display = NULL; // handle to wayland connection
-static struct wl_list outputs;	 // list for all present wayland outputs
+static struct wl_list outputs;	   // list for all present wayland outputs
+static bool wl_display_roundtrip_needed = false;
+static char *monitor_name = NULL;
 
 struct output {
 	struct wl_output *wl_output;
 	struct zwlr_gamma_control_v1 *gamma_control;
+	char *name;
 	uint32_t ramp_size;
 	int table_fd;
 	uint16_t *table;
@@ -115,6 +119,57 @@ static const struct zwlr_gamma_control_v1_listener gamma_control_listener = {
 		.failed = gamma_control_handle_failed,
 };
 
+/**
+ * wl_output event handle function
+ */
+static void wl_output_handle_geometry(void *data,
+		struct wl_output *wl_output,
+		int32_t x,
+		int32_t y,
+		int32_t physical_width,
+		int32_t physical_height,
+		int32_t subpixel,
+		const char *make,
+		const char *model,
+		int32_t transform) {}
+
+static void wl_output_handle_mode(void *data,
+		struct wl_output *wl_output,
+		uint32_t flags,
+		int32_t width,
+		int32_t height,
+		int32_t refresh) {}
+
+static void wl_output_handle_done(void *data, struct wl_output *wl_output) {}
+
+static void wl_output_handle_scale(void *data,
+		struct wl_output *wl_output,
+		int32_t factor) {}
+
+static void wl_output_handle_name(void *data,
+		struct wl_output *wl_output,
+		const char *name) {
+	struct output *output = data;
+	output->name = strdup(name);
+
+#ifdef DEBUG
+	fprintf(stdout, "wl_output_handle_name: %s\n", output->name);
+#endif // DEBUG
+}
+
+static void wl_output_handle_description(void *data,
+		struct wl_output *wl_output,
+		const char *description) {}
+
+static const struct wl_output_listener wl_output_listener = {
+		.geometry = wl_output_handle_geometry,
+		.mode = wl_output_handle_mode,
+		.done = wl_output_handle_done,
+		.scale = wl_output_handle_scale,
+		.name = wl_output_handle_name,
+		.description = wl_output_handle_description,
+};
+
 static void registry_handle_global(void *data,
 		struct wl_registry *registry,
 		uint32_t name,
@@ -124,13 +179,18 @@ static void registry_handle_global(void *data,
 	if (strcmp(interface, wl_output_interface.name) == 0) {
 		struct output *output = calloc(1, sizeof(struct output));
 		output->wl_output =
-				wl_registry_bind(registry, name, &wl_output_interface, 1);
+				wl_registry_bind(registry, name, &wl_output_interface, version);
+		wl_output_add_listener(output->wl_output, &wl_output_listener, output);
+		wl_display_roundtrip_needed = true;
 		wl_list_insert(&outputs, &output->link);
 	} else if (strcmp(interface,
 					   zwlr_gamma_control_manager_v1_interface.name) == 0) {
 		gamma_control_manager = wl_registry_bind(
 				registry, name, &zwlr_gamma_control_manager_v1_interface, 1);
 	}
+#ifdef DEBUG
+	fprintf(stdout, "registry global: %s\n", interface);
+#endif // DEBUG
 }
 
 static void registry_handle_global_remove(void *data,
@@ -147,6 +207,9 @@ static const struct wl_registry_listener registry_listener = {
 void wl_set_cbg(double contrast, double brightness, double gamma) {
 	struct output *output;
 	wl_list_for_each(output, &outputs, link) {
+		if (monitor_name != NULL && strcmp(output->name, monitor_name) != 0) {
+			continue;
+		}
 		output->table_fd =
 				create_gamma_table(output->ramp_size, &output->table);
 		if (output->table_fd < 0) {
@@ -250,12 +313,13 @@ static const char usage[] = "usage: wl-gammactl [options]\n"
 							"  -c <value>  set contrast (default: 1)\n"
 							"  -b <value>  set brightness (default: 1)\n"
 							"  -g <value>  set gamma (default: 1)\n"
+							"  -m <value>  specify a monitor/wl_output\n"
 							"  no options to show the gui\n";
 
 int run_cmdline(int argc, char *argv[]) {
 	double contrast = 1, brightness = 1, gamma = 1;
 	int opt;
-	while ((opt = getopt(argc, argv, "hc:b:g:")) != -1) {
+	while ((opt = getopt(argc, argv, "hc:b:g:m:")) != -1) {
 		switch (opt) {
 		case 'c':
 			contrast = strtod(optarg, NULL);
@@ -265,6 +329,12 @@ int run_cmdline(int argc, char *argv[]) {
 			break;
 		case 'g':
 			gamma = strtod(optarg, NULL);
+			break;
+		case 'm':
+			monitor_name = strdup(optarg);
+#ifdef DEBUG
+			fprintf(stdout, "name of specified monitor: %s\n", monitor_name);
+#endif // DEBUG
 			break;
 		case 'h':
 		default:
@@ -298,7 +368,10 @@ int main(int argc, char *argv[]) {
 	// send our messages (async), does this happen anyway??
 	wl_display_dispatch(display);
 	// block here because we want to wait for our async reply of the server
-	wl_display_roundtrip(display);
+	do {
+		wl_display_roundtrip_needed = false;
+		wl_display_roundtrip(display);
+	} while (wl_display_roundtrip_needed);
 
 	// check if we got a handle to the gamma controller global
 	if (gamma_control_manager == NULL) {
