@@ -6,7 +6,6 @@ project(
 
 # Define dependecies
 dep_gtk3 = dependency('gtk+-3.0')
-dep_wlroots = dependency('wlroots')
 dep_wayland_client = dependency('wayland-client')
 
 
@@ -75,7 +74,6 @@ executable(
 	'wl-gammactl',
 	sources,
 	dependencies : [
-		dep_wlroots,
 		dep_wayland_client,
 		dep_gtk3
 	],
