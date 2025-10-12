@@ -6,7 +6,6 @@ project(
 
 # Define dependecies
 dep_gtk3 = dependency('gtk+-3.0')
-dep_wlroots = dependency('wlroots')
 dep_wayland_client = dependency('wayland-client')
 
 
@@ -25,24 +24,6 @@ run_command(
 	'--target=@0@'.format(gres_src),
 	'--generate-source',
 	gres_xml
-)
-
-
-# Get protocol extensions
-git = find_program('git')
-run_command(
-	git,
-	'submodule',
-	'add',
-	'https://github.com/swaywm/wlr-protocols.git',
-	'wlr-protocols/'
-)
-run_command(
-	git,
-	'submodule',
-	'update',
-	'--init',
-	'--recursive'
 )
 
 
@@ -75,7 +56,6 @@ executable(
 	'wl-gammactl',
 	sources,
 	dependencies : [
-		dep_wlroots,
 		dep_wayland_client,
 		dep_gtk3
 	],
